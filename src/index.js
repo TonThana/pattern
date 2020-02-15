@@ -59,13 +59,13 @@ const draw = () => {
 
 	const elementGroup = d3.selectAll(".element-group");
 
-	ellipseRepeat();
-	function ellipseRepeat() {
+	groupRepeat();
+	function groupRepeat() {
 		elementGroup.each(function(_d, i) {
 			let timeInterval = 50;
 			let angle = 10 * (i + 1);
 
-			const ellipse = d3.select(this);
+			const group = d3.select(this);
 			let direction = 1;
 			setInterval(() => {
 				angle -= 1 * direction;
@@ -74,11 +74,28 @@ const draw = () => {
 					angle = 0;
 				}
 
-				ellipse.attr(
+				group.attr(
 					"transform",
 					` rotate(${angle}, ${center_x}, ${center_y}) `
 				);
 			}, timeInterval);
+
+			setInterval(() => {
+				const ellipseChild = group.select("ellipse");
+				const originalRy = ellipseChild.attr("ry");
+				const originalRx = ellipseChild.attr("rx");
+
+				ellipseChild
+					.transition()
+					.ease(d3.easeBounceIn)
+					.duration(Math.random() * 2000)
+					.attr("ry", Math.random() * ellipseChild.attr("rx"))
+					.attr("rx", Math.random() * ellipseChild.attr("ry"))
+					.transition()
+					.duration(Math.random() * 2000)
+					.attr("ry", originalRy)
+					.attr("rx", originalRx);
+			}, 4000);
 		});
 
 		setInterval(() => {
