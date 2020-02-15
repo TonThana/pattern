@@ -16,16 +16,16 @@ const draw = () => {
 		.attr("id", "svg_container");
 
 	const numEllipses = 50;
-	let ellipse_id = [];
+	let elementGroupId = [];
 	for (let i = 0; i < numEllipses; i += 1) {
-		ellipse_id.push(`el${i}`);
+		elementGroupId.push(`el${i}`);
 	}
 	// top left (0,0)
 	const center_x = VISUAL_W / 2;
 	const center_y = VISUAL_H / 2;
 
-	const max_ellipse_width = (VISUAL_W * 6) / 10;
-	const max_ellipse_height = (VISUAL_W * 3) / 10;
+	const max_ellipse_width = (VISUAL_W * 7) / 10;
+	const max_ellipse_height = (VISUAL_W * 3.5) / 10;
 
 	const min_ellipse_width = (VISUAL_W * 2) / 10;
 	const min_ellipse_height = (VISUAL_W * 1) / 10;
@@ -35,35 +35,33 @@ const draw = () => {
 
 	const ellipsesGroup = svg.append("g").attr("id", "ellipses-group");
 
-	ellipse_id.forEach((id, index) => {
+	elementGroupId.forEach((id, index) => {
 		const rx = (ellipse_width_range * (index + 1)) / numEllipses;
 		const ry = (ellipse_height_range * (index + 1)) / numEllipses;
 		ellipsesGroup
-
-			.append("ellipse")
+			.append("g")
 			.attr("id", id)
+			.attr("class", "element-group")
+			.attr(
+				"transform",
+				` rotate(${10 * (index + 1)}, ${center_x}, ${center_y})`
+			)
+			.append("ellipse")
 			.attr("class", "ellipses")
 			.attr("cx", center_x)
 			.attr("cy", center_y)
 			.attr("rx", rx)
 			.attr("ry", ry)
 			.attr("fill", "none")
-			.attr(
-				"stroke",
-				index === 20 ? " rgba(123,123,255, 1)" : "rgba(0,0,0,0.4)"
-			)
-			.attr(
-				"transform",
-				` rotate(${10 * (index + 1)}, ${center_x}, ${center_y})`
-			)
+			.attr("stroke", "rgba(0,0,0,0.1)")
 			.attr("stroke-width", 1);
 	});
 
-	const ellipses = d3.selectAll(".ellipses");
+	const elementGroup = d3.selectAll(".element-group");
 
 	ellipseRepeat();
 	function ellipseRepeat() {
-		ellipses.each(function(_d, i) {
+		elementGroup.each(function(_d, i) {
 			let timeInterval = 50;
 			let angle = 10 * (i + 1);
 
@@ -71,40 +69,57 @@ const draw = () => {
 			let direction = 1;
 			setInterval(() => {
 				angle -= 1 * direction;
-				if (Math.abs(angle) === 360) {
+				if (Math.abs(angle) === 720) {
 					direction *= -1;
 					angle = 0;
 				}
+
 				ellipse.attr(
 					"transform",
 					` rotate(${angle}, ${center_x}, ${center_y}) `
 				);
 			}, timeInterval);
 		});
+
+		setInterval(() => {
+			elementGroupId.sort(() => {
+				return Math.random() - 0.5;
+			});
+			for (let i = 0; i <= 20; i += 1) {
+				const element = d3.select(`#${elementGroupId[i]}`);
+				const ellipseChild = element.select("ellipse");
+
+				element
+					.append("circle")
+					.attr("fill", random_rgba())
+					.attr("r", 2)
+					.attr("cx", center_x + ellipseChild.attr("rx") / 2)
+					.attr("cy", center_y + ellipseChild.attr("ry") / 2)
+					.attr("opacity", 1)
+					.transition()
+					.duration(100)
+					.attr("opacity", 0)
+					.remove();
+			}
+		}, 100);
 	}
-
-	// const interpol_rotate = d3.interpolateString(
-	// 	`rotate(0,${center_x},${center_y})`,
-	// 	`rotate(-180,${center_x},${center_y})`
-	// );
-	// const interpol_rotate_back = d3.interpolateString(
-	// 	`rotate(-180,${center_x},${center_y})`,
-	// 	`rotate(0,${center_x},${center_y})`
-	// );
-
-	// function animateEllipses() {
-	// 	ellipses.each(function(_d, i) {
-	// 		d3.select(this)
-	// 			.transition()
-	// 			.duration(2500)
-	// 			.attrTween("transform", () => interpol_rotate)
-	// 			.transition()
-	// 			.duration(2500)
-	// 			.attr("transform", () => interpol_rotate_back)
-	// 			.on("end", animateEllipses);
-	// 	});
-	// }
-	// animateEllipses();
 };
+
+function random_rgba() {
+	var o = Math.round,
+		r = Math.random,
+		s = 255;
+	return (
+		"rgba(" +
+		o(r() * s) +
+		"," +
+		o(r() * s) +
+		"," +
+		o(r() * s) +
+		"," +
+		r().toFixed(1) +
+		")"
+	);
+}
 
 main();
