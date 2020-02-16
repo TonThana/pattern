@@ -15,14 +15,14 @@ const draw = () => {
 		.attr("height", VISUAL_H)
 		.attr("id", "svg_container");
 
-	const numEllipses = 120;
+	const numEllipses = 20;
 
 	const lineDataPlaceholder = [];
 
 	let elementGroupId = [];
 	for (let i = 0; i < numEllipses; i += 1) {
 		elementGroupId.push(`el${i}`);
-		lineDataPlaceholder.push([{ x: 0, y: 0 }]);
+		lineDataPlaceholder.push([[{ x: 0, y: 0 }]]);
 	}
 
 	const center_x = VISUAL_W / 2;
@@ -68,58 +68,44 @@ const draw = () => {
 		.attr("stroke-width", 1);
 
 	rotateAnimation(center_x, center_y);
-
+	drawLinesAnimate(center_x, center_y);
 	changeRxRyEllipses();
-	drawLinesAnimate(center_x, center_y, min_ellipse_width, min_ellipse_height);
+	drawLinesAnimate(center_x, center_y);
 };
 
 main();
 
 function rotateAnimation(center_x, center_y) {
 	const elementGroup = d3.selectAll(".element-group");
-	let then = Date.now();
-	let now;
-	let elapsed;
-	let changeRxRyRate = 500;
-	const rotate = () => {
-		requestAnimationFrame(rotate);
-		now = Date.now();
-		elapsed = now - then;
-		if (elapsed > changeRxRyRate) {
-			then = now - (elapsed % changeRxRyRate);
-			elementGroup.each(function(_d, i) {
-				let angle = 10 * (i + 1);
-				const group = d3.select(this);
-				let direction = 1;
 
-				angle -= 1 * direction;
-				if (Math.abs(angle) === 180) {
-					direction *= -1;
-					angle = 0;
-				}
-				group
-					.transition()
-					.attr(
-						"transform",
-						` rotate(${angle}, ${center_x}, ${center_y}) `
-					);
-			});
-		}
-	};
-	requestAnimationFrame(rotate);
+	elementGroup.each(function(_d, i) {
+		let angle = 5 * (i + 1);
+		const group = d3.select(this);
+		let direction = 1;
+		setInterval(() => {
+			angle -= 1 * direction;
+			if (Math.abs(angle) === 720) {
+				direction *= -1;
+				angle = 0;
+			}
+			group.attr(
+				"transform",
+				` rotate(${angle}, ${center_x}, ${center_y}) `
+			);
+		}, 10);
+	});
 }
 
-function drawLinesAnimate(
-	center_x,
-	center_y,
-	min_ellipse_width,
-	min_ellipse_height
-) {
+function drawLinesAnimate(cx, cy) {
 	let then = Date.now();
 	let now;
 	let elapsed;
 	let changeRxRyRate = 500;
-	const groups = d3.selectAll(".element-group");
+	const lineFunction = d3
+		.line()
+		.x(d => d.x)
+		.y(d => d.y)
+		.curve(d3.curveCatmullRom);
 	const drawLines = () => {
 		requestAnimationFrame(drawLines);
 		now = Date.now();
@@ -127,41 +113,63 @@ function drawLinesAnimate(
 
 		if (elapsed > changeRxRyRate) {
 			then = now - (elapsed % changeRxRyRate);
-
+			const groups = d3.selectAll(".element-group");
 			groups.each(function() {
 				const element = d3.select(this);
 				const ellipseChild = element.select("ellipse");
+
 				// prepare points for lines
-				const start_x = center_x + ellipseChild.attr("rx") / 1.2;
-				const start_y = center_y + ellipseChild.attr("ry") / 1.2;
-				const lineData = [
-					{
-						x: start_x,
-						y: start_y,
-					},
-					{
-						x: center_x + min_ellipse_width,
-						y: center_y + min_ellipse_height,
-					},
-					{
-						x: center_x,
-						y: center_y,
-					},
-				];
-				const lineFunction = d3
-					.line()
-					.x(d => d.x)
-					.y(d => d.y);
+				const start_x =
+					cx + (ellipseChild.attr("rx") / 1.2) * randomPosNeg();
+				const start_y =
+					cy + (ellipseChild.attr("ry") / 1.2) * randomPosNeg();
+
+				const lineData = [[]];
+
+				const width = cx - start_x;
+				const widthSign = width < 0 ? -1 : 1;
+				const height = cy - start_y;
+				const heightSign = height < 0 ? -1 : 1;
+				const distance = Math.sqrt(width * width + height * height);
+
+				const numOfPoints = Math.floor(distance / 40);
+
+				for (let i = 0; i < numOfPoints; i += 1) {
+					if (i === 0) {
+						lineData[0].push({ x: start_x, y: start_y });
+					}
+
+					lineData[0].push({
+						x: start_x + 40 * i * widthSign + Math.random() * 10,
+						y: start_y + 40 * i * heightSign + Math.random() * 10,
+					});
+
+					if (i === numOfPoints - 1) {
+						lineData[0].push({
+							x: cx,
+							y: cy,
+						});
+					}
+				}
+
 				element
+					.selectAll(".line-path")
+					.data(lineData)
+					.enter()
 					.append("path")
-					.attr("d", lineFunction(lineData))
+					.attr("d", d => lineFunction(d))
+					.attr("fill", "none")
+					.attr("opacity", 0.1)
+					.transition()
+					.duration(500)
 					.attr("stroke", "black")
 					.attr("stroke-width", 1)
 					.attr("fill", "none")
-					.attr("opacity", 1)
 					.transition()
 					.duration(500)
-					.attr("opacity", 0.3)
+					.attr("opacity", 0)
+					.attr("fill", "none")
+					.delay(0)
 					.remove();
 			});
 		}
@@ -185,17 +193,55 @@ function changeRxRyEllipses() {
 				const ellipse = d3.select(this);
 				const originalRy = ellipse.attr("ry");
 				const originalRx = ellipse.attr("rx");
+
+				const { rx, ry } = ellipseRxRYTransform(
+					Math.floor(Math.random() * 3),
+					originalRx,
+					originalRy
+				);
 				ellipse
 					.transition()
-					.duration(300)
-					.attr("ry", Math.random() * originalRy)
-					.attr("rx", Math.random() * originalRx)
+					.duration(500)
+					.attr("ry", ry)
+					.attr("rx", rx)
+					.attr("opacity", Math.random().toFixed(1))
 					.transition()
-					.duration(300)
+					.duration(500)
 					.attr("ry", originalRy)
-					.attr("rx", originalRx);
+					.attr("rx", originalRx)
+					.attr("opacity", Math.random().toFixed(1));
 			});
 		}
 	};
+
 	requestAnimationFrame(changeRxRy);
+}
+
+function randomPosNeg() {
+	if (Math.random() - 0.5 < 0) {
+		return -1;
+	}
+	return 1;
+}
+
+function ellipseRxRYTransform(selection, originalRx, originalRy) {
+	const scaling = Math.random() * 1;
+	const functions = {
+		"0": {
+			rx: originalRx * scaling,
+			ry: originalRx * scaling,
+		},
+
+		"1": {
+			rx: originalRy * scaling,
+			ry: originalRy * scaling,
+		},
+
+		"2": {
+			rx: Math.random() * originalRy,
+			ry: Math.random() * originalRx,
+		},
+	};
+
+	return functions[selection];
 }
