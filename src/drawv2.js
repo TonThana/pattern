@@ -26,7 +26,7 @@ const drawV2 = () => {
 			`translate(${center_x},${center_y}) rotate(0,${center_x},${center_y})`
 		);
 
-	visGroup
+	const path = visGroup
 		.selectAll("path")
 		.data(spiralData)
 		.enter()
