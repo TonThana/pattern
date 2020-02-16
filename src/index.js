@@ -1,11 +1,13 @@
 const d3 = require("d3");
+const { drawV2 } = require("./drawv2");
 
 const main = () => {
-	console.log("hello");
-	draw();
+	// console.log("hello");
+	// drawv1();
+	drawV2();
 };
 
-const draw = () => {
+const drawv1 = () => {
 	const visProper = d3.select("#vis-proper");
 	visProper.selectAll("*").remove();
 	const VISUAL_W = window.innerWidth * 0.5;
@@ -88,11 +90,13 @@ function rotateAnimation(center_x, center_y) {
 				direction *= -1;
 				angle = 0;
 			}
-			group.attr(
-				"transform",
-				` rotate(${angle}, ${center_x}, ${center_y}) `
-			);
-		}, 10);
+			group
+				.transition()
+				.attr(
+					"transform",
+					` rotate(${angle}, ${center_x}, ${center_y}) `
+				);
+		}, 100);
 	});
 }
 
@@ -100,12 +104,13 @@ function drawLinesAnimate(cx, cy) {
 	let then = Date.now();
 	let now;
 	let elapsed;
-	let changeRxRyRate = 500;
+	let changeRxRyRate = 2000;
 	const lineFunction = d3
 		.line()
 		.x(d => d.x)
 		.y(d => d.y)
-		.curve(d3.curveCatmullRom);
+		.curve(d3.curveLinear);
+
 	const drawLines = () => {
 		requestAnimationFrame(drawLines);
 		now = Date.now();
@@ -115,6 +120,9 @@ function drawLinesAnimate(cx, cy) {
 			then = now - (elapsed % changeRxRyRate);
 			const groups = d3.selectAll(".element-group");
 			groups.each(function() {
+				if (Math.random() - 0.8 < 0) {
+					return;
+				}
 				const element = d3.select(this);
 				const ellipseChild = element.select("ellipse");
 
@@ -130,21 +138,13 @@ function drawLinesAnimate(cx, cy) {
 				const widthSign = width < 0 ? -1 : 1;
 				const height = cy - start_y;
 				const heightSign = height < 0 ? -1 : 1;
-				const distance = Math.sqrt(width * width + height * height);
 
-				const numOfPoints = Math.floor(distance / 40);
+				const numOfPoints = 4;
 
 				for (let i = 0; i < numOfPoints; i += 1) {
 					if (i === 0) {
 						lineData[0].push({ x: start_x, y: start_y });
-					}
-
-					lineData[0].push({
-						x: start_x + 40 * i * widthSign + Math.random() * 10,
-						y: start_y + 40 * i * heightSign + Math.random() * 10,
-					});
-
-					if (i === numOfPoints - 1) {
+					} else if (i === numOfPoints - 1) {
 						lineData[0].push({
 							x: cx,
 							y: cy,
@@ -159,14 +159,14 @@ function drawLinesAnimate(cx, cy) {
 					.append("path")
 					.attr("d", d => lineFunction(d))
 					.attr("fill", "none")
-					.attr("opacity", 0.1)
+					.attr("opacity", 0.3)
 					.transition()
-					.duration(500)
+					.duration(1000)
 					.attr("stroke", "black")
 					.attr("stroke-width", 1)
 					.attr("fill", "none")
 					.transition()
-					.duration(500)
+					.duration(1000)
 					.attr("opacity", 0)
 					.attr("fill", "none")
 					.delay(0)
@@ -225,16 +225,15 @@ function randomPosNeg() {
 }
 
 function ellipseRxRYTransform(selection, originalRx, originalRy) {
-	const scaling = Math.random() * 1;
 	const functions = {
 		"0": {
-			rx: originalRx * scaling,
-			ry: originalRx * scaling,
+			rx: originalRx,
+			ry: originalRx,
 		},
 
 		"1": {
-			rx: originalRy * scaling,
-			ry: originalRy * scaling,
+			rx: originalRy,
+			ry: originalRy,
 		},
 
 		"2": {
